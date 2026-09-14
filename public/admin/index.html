@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="robots" content="noindex, nofollow" />
+<title>Админка — Код уважения</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&family=Manrope:wght@400;600;700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="../assets/css/style.css" />
+<style>
+  body { background: var(--paper); padding: 40px 20px; }
+  .admin-wrap { max-width: 960px; margin: 0 auto; }
+  .admin-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 28px; flex-wrap: wrap; gap: 12px; }
+  .admin-header h1 { font-size: 1.6rem; }
+  .panel { background: #fff; border: 1px solid var(--divider); border-radius: var(--radius-card); padding: 28px; margin-bottom: 24px; }
+  .login-panel { max-width: 380px; margin: 80px auto; }
+  .field { margin-bottom: 16px; }
+  .field label { display: block; font-family: var(--font-ui); font-size: 0.85rem; font-weight: 600; margin-bottom: 6px; }
+  .field input, .field textarea { width: 100%; padding: 10px 12px; border-radius: 8px; border: 1px solid var(--divider); font-family: var(--font-ui); font-size: 0.95rem; }
+  table { width: 100%; border-collapse: collapse; font-family: var(--font-ui); font-size: 0.88rem; }
+  th, td { text-align: left; padding: 10px 8px; border-bottom: 1px solid var(--divider); vertical-align: top; }
+  th { font-weight: 700; color: var(--muted); font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.03em; }
+  .badge { display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: 0.76rem; font-weight: 700; }
+  .badge--paid { background: #e5f3e6; color: #2c6b31; }
+  .badge--pending { background: #fbeecf; color: #9e7437; }
+  .badge--failed { background: #fbe4e4; color: #a13333; }
+  .btn-small { height: 34px; padding: 0 14px; font-size: 0.82rem; }
+  .error-text { color: #a13333; font-family: var(--font-ui); font-size: 0.88rem; margin-top: 10px; }
+  .hint { color: var(--muted); font-family: var(--font-ui); font-size: 0.82rem; margin-top: 6px; }
+  [hidden] { display: none !important; }
+  .stat-cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px; }
+  .stat-card { background: #fff; border: 1px solid var(--divider); border-radius: var(--radius-card); padding: 18px 20px; }
+  .stat-card__label { font-family: var(--font-ui); font-size: 0.78rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.03em; margin: 0 0 8px; }
+  .stat-card__value { font-family: var(--font-display); font-size: 1.7rem; font-weight: 700; margin: 0; }
+  @media (max-width: 700px) { .stat-cards { grid-template-columns: repeat(2, 1fr); } }
+</style>
+</head>
+<body>
+
+<div id="loginScreen" class="admin-wrap">
+  <div class="panel login-panel">
+    <h1 style="margin-bottom: 18px;">Вход в админку</h1>
+    <div class="field">
+      <label for="loginPassword">Пароль</label>
+      <input type="password" id="loginPassword" autocomplete="current-password" />
+    </div>
+    <button class="btn btn--primary btn--wide" id="loginBtn" type="button">Войти</button>
+    <p class="error-text" id="loginError" hidden></p>
+  </div>
+</div>
+
+<div id="mainScreen" class="admin-wrap" hidden>
+  <div class="admin-header">
+    <h1>Заказы — «Код уважения»</h1>
+    <div style="display:flex; gap:10px;">
+      <button class="btn btn--secondary btn-small" id="changePasswordToggle" type="button" style="color:var(--ink); border-color:var(--divider);">Сменить пароль</button>
+      <button class="btn btn--secondary btn-small" id="logoutBtn" type="button" style="color:var(--ink); border-color:var(--divider);">Выйти</button>
+    </div>
+  </div>
+
+  <section class="stat-cards" id="statCards" aria-label="Основные показатели">
+    <div class="stat-card">
+      <p class="stat-card__label">Всего оплат</p>
+      <p class="stat-card__value" id="statPaidCount">—</p>
+    </div>
+    <div class="stat-card">
+      <p class="stat-card__label">Выручка</p>
+      <p class="stat-card__value" id="statRevenue">—</p>
+    </div>
+    <div class="stat-card">
+      <p class="stat-card__label">Визитов за 30 дней</p>
+      <p class="stat-card__value" id="statVisits">—</p>
+    </div>
+    <div class="stat-card">
+      <p class="stat-card__label">Конверсия за 30 дней</p>
+      <p class="stat-card__value" id="statConversion">—</p>
+    </div>
+  </section>
+
+  <div class="panel" id="changePasswordPanel" hidden>
+    <h3 style="margin-bottom: 14px;">Смена пароля</h3>
+    <div class="field"><label for="currentPassword">Текущий пароль</label><input type="password" id="currentPassword" /></div>
+    <div class="field"><label for="newPassword">Новый пароль (от 8 символов)</label><input type="password" id="newPassword" /></div>
+    <button class="btn btn--primary btn-small" id="submitChangePassword" type="button">Сохранить</button>
+    <p class="error-text" id="changePasswordError" hidden></p>
+  </div>
+
+  <div class="panel">
+    <h3 style="margin-bottom: 6px;">Источники переходов за 30 дней</h3>
+    <p class="hint" style="margin-bottom: 14px;">Метки UTM, с которыми люди приходят на страницу</p>
+    <table>
+      <thead><tr><th>Источник</th><th>Визитов</th></tr></thead>
+      <tbody id="sourcesBody"><tr><td colspan="2" class="hint">Загрузка…</td></tr></tbody>
+    </table>
+  </div>
+
+  <div class="panel">
+    <h3 style="margin-bottom: 14px;">Выдать доступ вручную</h3>
+    <p class="hint" style="margin-bottom: 14px;">Создаёт оплаченную запись и токен доступа. Ссылку нужно скопировать и отправить клиенту отдельно — сама запись в базе доступ не открывает.</p>
+    <div class="field"><label for="grantEmail">Email клиента (необязательно)</label><input type="text" id="grantEmail" /></div>
+    <div class="field"><label for="grantNotes">Заметка (необязательно)</label><input type="text" id="grantNotes" placeholder="Например: оплатил, чек прислал в директ" /></div>
+    <button class="btn btn--primary btn-small" id="grantBtn" type="button">Выдать доступ</button>
+    <p class="error-text" id="grantError" hidden></p>
+  </div>
+
+  <div class="panel">
+    <table>
+      <thead>
+        <tr>
+          <th>Дата</th>
+          <th>Email</th>
+          <th>Сумма</th>
+          <th>Статус</th>
+          <th>Источник</th>
+          <th>Ссылка</th>
+        </tr>
+      </thead>
+      <tbody id="ordersBody"></tbody>
+    </table>
+  </div>
+</div>
+
+<script src="admin.js"></script>
+</body>
+</html>
