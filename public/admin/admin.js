@@ -5,6 +5,15 @@ const loginBtn = document.getElementById("loginBtn");
 const loginError = document.getElementById("loginError");
 const ordersBody = document.getElementById("ordersBody");
 
+function escapeHtml(value) {
+  return String(value)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 function fmtDate(iso) {
   if (!iso) return "—";
   const d = new Date(iso);
@@ -26,7 +35,7 @@ async function loadOrders() {
       const link = o.access_token ? `${window.location.origin}/?access=${o.access_token}` : null;
       return `<tr>
         <td>${fmtDate(o.created_at)}</td>
-        <td>${o.email || "—"}</td>
+        <td>${o.email ? escapeHtml(o.email) : "—"}</td>
         <td>${Number(o.amount).toFixed(0)} ₽</td>
         <td>${statusBadge(o.status)}</td>
         <td>${o.access_source === "manual" ? "Вручную" : "Робокасса"}</td>
@@ -60,7 +69,7 @@ async function loadStats() {
     sourcesBody.innerHTML = `<tr><td colspan="2" class="hint">Пока нет данных</td></tr>`;
   } else {
     sourcesBody.innerHTML = stats.topSources
-      .map((s) => `<tr><td>${s.source}</td><td>${s.count}</td></tr>`)
+      .map((s) => `<tr><td>${escapeHtml(s.source)}</td><td>${Number(s.count)}</td></tr>`)
       .join("");
   }
 }

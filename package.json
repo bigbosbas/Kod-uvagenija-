@@ -6,16 +6,21 @@
   "main": "server/server.js",
   "scripts": {
     "start": "node server/server.js",
-    "seed-admin": "node scripts/seed-admin-password.js"
+    "seed-admin": "node scripts/seed-admin-password.js",
+    "build": "cleancss -o public/assets/css/style.css.min public/assets/css/style.css && mv public/assets/css/style.css.min public/assets/css/style.css && terser public/assets/js/main.js -o public/assets/js/main.js.min -c -m && mv public/assets/js/main.js.min public/assets/js/main.js"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.658.1",
     "@aws-sdk/s3-request-presigner": "^3.658.1",
     "bcryptjs": "^2.4.3",
+    "clean-css-cli": "^5.6.3",
+    "compression": "^1.8.2",
     "cookie-parser": "^1.4.6",
     "dotenv": "^16.4.5",
     "express": "^4.21.0",
+    "helmet": "^8.3.0",
     "jsonwebtoken": "^9.0.2",
-    "pg": "^8.13.0"
+    "pg": "^8.13.0",
+    "terser": "^5.51.2"
   }
 }
