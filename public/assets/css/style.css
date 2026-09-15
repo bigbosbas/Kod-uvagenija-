@@ -154,7 +154,14 @@ a { color: inherit; }
    ряд с ней, а не отдельной строкой. */
 .hero__cta-star,
 .hero__inline-foreign-note { display: none; }
-.hero__inline-foreign-note a { color: var(--gold-light); text-decoration: underline; }
+/* Эта сноска ложится на светлый (закатное небо) участок фото, поэтому
+   она темнее остального текста строки — не сливается со светлым фоном.
+   Остальная часть строки ("Безопасная оплата...") не трогается. */
+.hero__inline-foreign-note {
+  color: var(--ink);
+  text-shadow: 0 1px 2px rgba(255,255,255,0.4);
+}
+.hero__inline-foreign-note a { color: var(--gold-dark); text-decoration: underline; }
 
 /* Этот .lock-note (в hero) содержит span, который может переноситься на
    вторую строку из-за инлайн-сноски — без этого правила flexbox сдвигал бы
