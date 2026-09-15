@@ -130,10 +130,21 @@ a { color: inherit; }
    ссылка ОБЯЗАТЕЛЬНО должны лежать в одном общем <span> — если ссылку
    вынести отдельным элементом рядом с текстом, это тоже станет отдельным
    flex-элементом и не будет переноситься вместе с текстом как единый поток. */
+/* justify-content:center + width:fit-content на .lock-note — по умолчанию
+   flex отдаёт переносящемуся <span> ВСЮ доступную ширину строки (а не
+   реальную ширину самой длинной обёрнутой строки текста), поэтому весь
+   .lock-note растягивался на всю ширину колонки и не мог по-настоящему
+   центрироваться под кнопкой, как ни старайся с align-items на родителе.
+   fit-content заставляет посчитать реальную нужную ширину. */
 .lock-note {
   display: flex;
   align-items: flex-start;
+  justify-content: center;
   gap: 8px;
+  width: fit-content;
+  max-width: 100%;
+  margin-left: auto;
+  margin-right: auto;
   /* .final-cta центрирует весь текст секции (text-align:center) — без
      явного left перенесённая строка внутри .lock-note центрировалась бы
      в своём широком блоке и визуально "отрывалась" от иконки слева. */
@@ -144,8 +155,13 @@ a { color: inherit; }
   margin-top: 14px;
 }
 .section--dark .lock-note { color: rgba(255,253,248,0.72); }
+/* fit-content на самом .lock-note не помогает — по умолчанию flex-элемент
+   при переносе всё равно занимает ВСЮ доступную ширину ряда (это решается
+   внутри flex-раскладки родителя раньше, чем срабатывает fit-content
+   снаружи). Настоящая ширина по контенту считается, только если fit-content
+   стоит на самом переносящемся <span>. */
+.lock-note > span { width: fit-content; max-width: 100%; min-width: 0; }
 .lock-note svg { width: 15px; height: 15px; flex-shrink: 0; margin-top: 0.2em; }
-.lock-note > span { min-width: 0; }
 
 .hero .lock-note {
   color: rgba(255,253,248,0.78);
