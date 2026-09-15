@@ -122,9 +122,17 @@ a { color: inherit; }
 
 .btn--wide { width: 100%; }
 
+/* align-items:flex-start (не center) + min-width:0 на span — текст внутри
+   .lock-note теперь длиннее одного слова и может переноситься на вторую
+   строку на мобильном. Без этого flexbox сдвигал бы ВЕСЬ span на новую
+   строку целиком вместо переноса только лишнего слова, а иконка "плавала"
+   бы по центру двух строк вместо того чтобы стоять у первой. Текст и
+   ссылка ОБЯЗАТЕЛЬНО должны лежать в одном общем <span> — если ссылку
+   вынести отдельным элементом рядом с текстом, это тоже станет отдельным
+   flex-элементом и не будет переноситься вместе с текстом как единый поток. */
 .lock-note {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 8px;
   font-family: var(--font-ui);
   font-size: 0.82rem;
@@ -132,21 +140,14 @@ a { color: inherit; }
   margin-top: 14px;
 }
 .section--dark .lock-note { color: rgba(255,253,248,0.72); }
-.lock-note svg { width: 15px; height: 15px; flex-shrink: 0; }
+.lock-note svg { width: 15px; height: 15px; flex-shrink: 0; margin-top: 0.2em; }
+.lock-note > span { min-width: 0; }
 
 .hero .lock-note {
   color: rgba(255,253,248,0.78);
   text-shadow: 0 1px 4px rgba(0,0,0,0.6);
 }
 .hero .lock-note a { color: var(--gold-light); text-decoration: underline; }
-
-/* .lock-note (в hero) — span с текстом может переноситься на вторую строку
-   на мобильном (фраза длинная); без align-items:flex-start и min-width:0
-   flexbox сдвигал бы ВЕСЬ span на новую строку целиком вместо переноса
-   только лишнего слова, а иконка "плавала" по центру двух строк. */
-.hero .lock-note { align-items: flex-start; }
-.hero .lock-note svg { margin-top: 0.2em; flex-shrink: 0; }
-.hero .lock-note > span { min-width: 0; }
 
 /* ---------- Иконки ---------- */
 
