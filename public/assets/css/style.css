@@ -148,6 +148,21 @@ a { color: inherit; }
 }
 .hero__foreign-card-note a { color: var(--gold-light); text-decoration: underline; }
 
+/* На мобильном под кнопкой нет места для отдельной строки (см. правку
+   ниже, .hero__foreign-card-note там скрыта) — вместо неё звёздочка на
+   кнопке и короткая сноска в конце строки "Безопасная оплата", в один
+   ряд с ней, а не отдельной строкой. */
+.hero__cta-star,
+.hero__inline-foreign-note { display: none; }
+.hero__inline-foreign-note a { color: var(--gold-light); text-decoration: underline; }
+
+/* Этот .lock-note (в hero) содержит span, который может переноситься на
+   вторую строку из-за инлайн-сноски — без этого правила flexbox сдвигал бы
+   ВЕСЬ span на новую строку целиком вместо переноса только лишнего слова. */
+.hero .lock-note { align-items: flex-start; }
+.hero .lock-note svg { margin-top: 0.2em; flex-shrink: 0; }
+.hero .lock-note > span { min-width: 0; }
+
 /* ---------- Иконки ---------- */
 
 .icon {
@@ -878,12 +893,21 @@ body.legal-modal-open { overflow: hidden; }
   .hero__ctas .btn { width: 100%; height: 44px; }
   .lock-note { margin-top: clamp(6px, 1svh, 8px); }
 
-  /* Замерено напрямую (getBoundingClientRect): даже на стандартных 375×812
-     эта строка заканчивается ниже той точки (~52% высоты), где по фону
-     начинается книга — то есть наложение не зависит от нехватки высоты
-     экрана, оно есть почти всегда. Прячем строку в hero целиком на мобильном;
-     та же фраза уже есть в финальном блоке покупки ниже по странице. */
+  /* Полная строка про иностранную карту не помещается над книгой — прячем
+     её; вместо неё звёздочка на кнопке и короткая сноска в конце строки
+     "Безопасная оплата", в тот же ряд (см. .hero .lock-note ниже — там же
+     разбор, почему это раньше ломалось на flexbox). Проверено вживую:
+     на стандартных 375×812 переносится только слово "Telegram" и остаётся
+     чистый отступ до книги; на очень низких экранах (390×620 и ниже —
+     обычно это браузер с ещё не свёрнутой адресной строкой) даже это
+     задевает обложку, поэтому там прячем сноску совсем через max-height. */
   .hero__foreign-card-note { display: none; }
+  .hero__cta-star,
+  .hero__inline-foreign-note { display: inline; }
+  @media (max-height: 680px) {
+    .hero__inline-foreign-note,
+    .hero__cta-star { display: none; }
+  }
 
   .skills-row, .results-row { grid-template-columns: repeat(2, 1fr); row-gap: 24px; }
   .skill-item:nth-child(odd), .result-item:nth-child(odd) { border-left: none; }
