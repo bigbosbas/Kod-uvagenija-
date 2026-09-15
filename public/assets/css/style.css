@@ -134,38 +134,18 @@ a { color: inherit; }
 .section--dark .lock-note { color: rgba(255,253,248,0.72); }
 .lock-note svg { width: 15px; height: 15px; flex-shrink: 0; }
 
-.hero .lock-note { color: rgba(255,253,248,0.78); }
-.hero .lock-note,
-.hero__foreign-card-note {
-  text-shadow: 0 1px 4px rgba(0,0,0,0.6);
-}
-
-.hero__foreign-card-note {
-  font-family: var(--font-ui);
-  font-size: 0.8rem;
-  color: rgba(255,253,248,0.78);
-  margin: 8px 0 0;
-}
-.hero__foreign-card-note a { color: var(--gold-light); text-decoration: underline; }
-
-/* На мобильном под кнопкой нет места для отдельной строки (см. правку
-   ниже, .hero__foreign-card-note там скрыта) — вместо неё звёздочка на
-   кнопке и короткая сноска в конце строки "Безопасная оплата", в один
-   ряд с ней, а не отдельной строкой. */
-.hero__cta-star,
-.hero__inline-foreign-note { display: none; }
-/* Эта сноска ложится на светлый (закатное небо) участок фото, поэтому
-   она темнее остального текста строки — не сливается со светлым фоном.
-   Остальная часть строки ("Безопасная оплата...") не трогается. */
-.hero__inline-foreign-note {
+/* Эта строка (про иностранную карту) ложится на светлый (закатное небо)
+   участок фото — тёмный текст читается там лучше, чем светлый. */
+.hero .lock-note {
   color: var(--ink);
   text-shadow: 0 1px 2px rgba(255,255,255,0.4);
 }
-.hero__inline-foreign-note a { color: var(--gold-dark); text-decoration: underline; }
+.hero .lock-note a { color: var(--gold-dark); text-decoration: underline; }
 
-/* Этот .lock-note (в hero) содержит span, который может переноситься на
-   вторую строку из-за инлайн-сноски — без этого правила flexbox сдвигал бы
-   ВЕСЬ span на новую строку целиком вместо переноса только лишнего слова. */
+/* .lock-note (в hero) — span с текстом может переноситься на вторую строку
+   на мобильном (фраза длинная); без align-items:flex-start и min-width:0
+   flexbox сдвигал бы ВЕСЬ span на новую строку целиком вместо переноса
+   только лишнего слова, а иконка "плавала" по центру двух строк. */
 .hero .lock-note { align-items: flex-start; }
 .hero .lock-note svg { margin-top: 0.2em; flex-shrink: 0; }
 .hero .lock-note > span { min-width: 0; }
@@ -900,20 +880,13 @@ body.legal-modal-open { overflow: hidden; }
   .hero__ctas .btn { width: 100%; height: 44px; }
   .lock-note { margin-top: clamp(6px, 1svh, 8px); }
 
-  /* Полная строка про иностранную карту не помещается над книгой — прячем
-     её; вместо неё звёздочка на кнопке и короткая сноска в конце строки
-     "Безопасная оплата", в тот же ряд (см. .hero .lock-note ниже — там же
-     разбор, почему это раньше ломалось на flexbox). Проверено вживую:
-     на стандартных 375×812 переносится только слово "Telegram" и остаётся
-     чистый отступ до книги; на очень низких экранах (390×620 и ниже —
-     обычно это браузер с ещё не свёрнутой адресной строкой) даже это
-     задевает обложку, поэтому там прячем сноску совсем через max-height. */
-  .hero__foreign-card-note { display: none; }
-  .hero__cta-star,
-  .hero__inline-foreign-note { display: inline; }
+  /* Проверено вживую: на стандартных 375×812 строка про иностранную карту
+     переносится на два слова, но чистый отступ до книги остаётся. На очень
+     низких экранах (390×620 и ниже — обычно браузер с ещё не свёрнутой
+     адресной строкой) она задевает обложку — там её лучше не показывать
+     совсем: та же фраза есть в блоке финальной покупки ниже по странице. */
   @media (max-height: 680px) {
-    .hero__inline-foreign-note,
-    .hero__cta-star { display: none; }
+    .hero .lock-note { display: none; }
   }
 
   .skills-row, .results-row { grid-template-columns: repeat(2, 1fr); row-gap: 24px; }
