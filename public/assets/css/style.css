@@ -134,13 +134,11 @@ a { color: inherit; }
 .section--dark .lock-note { color: rgba(255,253,248,0.72); }
 .lock-note svg { width: 15px; height: 15px; flex-shrink: 0; }
 
-/* Эта строка (про иностранную карту) ложится на светлый (закатное небо)
-   участок фото — тёмный текст читается там лучше, чем светлый. */
 .hero .lock-note {
-  color: var(--ink);
-  text-shadow: 0 1px 2px rgba(255,255,255,0.4);
+  color: rgba(255,253,248,0.78);
+  text-shadow: 0 1px 4px rgba(0,0,0,0.6);
 }
-.hero .lock-note a { color: var(--gold-dark); text-decoration: underline; }
+.hero .lock-note a { color: var(--gold-light); text-decoration: underline; }
 
 /* .lock-note (в hero) — span с текстом может переноситься на вторую строку
    на мобильном (фраза длинная); без align-items:flex-start и min-width:0
