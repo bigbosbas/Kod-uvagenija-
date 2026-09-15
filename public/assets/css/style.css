@@ -134,6 +134,10 @@ a { color: inherit; }
   display: flex;
   align-items: flex-start;
   gap: 8px;
+  /* .final-cta центрирует весь текст секции (text-align:center) — без
+     явного left перенесённая строка внутри .lock-note центрировалась бы
+     в своём широком блоке и визуально "отрывалась" от иконки слева. */
+  text-align: left;
   font-family: var(--font-ui);
   font-size: 0.82rem;
   color: var(--muted);
