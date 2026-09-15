@@ -601,9 +601,8 @@ a { color: inherit; }
   color: var(--ink);
 }
 .final-cta__ctas { display: flex; flex-direction: column; align-items: center; gap: 14px; }
-.final-cta .lock-note { color: var(--ink); opacity: 0.75; }
-.final-cta__foreign-card-note { font-family: var(--font-ui); font-size: 0.8rem; font-weight: 600; color: var(--ink); margin: 0; }
-.final-cta__foreign-card-note a { color: var(--gold-dark); font-weight: 700; text-decoration: underline; }
+.final-cta .lock-note { color: var(--ink); font-weight: 600; }
+.final-cta .lock-note a { color: var(--gold-dark); font-weight: 700; text-decoration: underline; }
 
 /* ---------- Сервисная полоса ---------- */
 
