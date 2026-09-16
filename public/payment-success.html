@@ -14,6 +14,7 @@
     @keyframes spin { to { transform: rotate(360deg); } }
     .status-card__title { font-family: var(--font-display); font-weight: 600; font-size: 1.3rem; margin: 0 0 10px; }
     .status-card__text { color: var(--muted); font-family: var(--font-ui); font-size: 0.92rem; line-height: 1.6; margin: 0; }
+    .status-card__hint { color: var(--muted); font-family: var(--font-ui); font-size: 0.84rem; line-height: 1.5; margin: 14px 0 0; }
     .status-card__link { display: none; margin-top: 20px; }
   </style>
 </head>
@@ -22,6 +23,7 @@
     <div class="status-card__spinner" id="spinner"></div>
     <h1 class="status-card__title" id="statusTitle">Проверяем оплату…</h1>
     <p class="status-card__text" id="statusText">Обычно это занимает несколько секунд. Не закрывайте страницу.</p>
+    <p class="status-card__hint" id="earlyHint" hidden>Если оплата долго не подтверждается, эту страницу можно закрыть и открыть сайт заново — доступ откроется сам, повторно оплачивать не нужно.</p>
     <a class="btn btn--primary status-card__link" id="homeLink" href="/">Вернуться на сайт</a>
   </div>
 
@@ -31,6 +33,7 @@
     const spinner = document.getElementById("spinner");
     const title = document.getElementById("statusTitle");
     const text = document.getElementById("statusText");
+    const earlyHint = document.getElementById("earlyHint");
     const homeLink = document.getElementById("homeLink");
 
     // Робокасса подтверждает оплату вебхуком не мгновенно — по опыту на
@@ -38,6 +41,14 @@
     // прежде чем показывать тупиковое сообщение.
     const MAX_ATTEMPTS = 240;
     const INTERVAL_MS = 2500; // 240 * 2.5с = 10 минут
+
+    // На мобильных банковское 3-D Secure/SMS-подтверждение иногда открывает
+    // отдельную вкладку и возвращает пользователя на эту страницу с
+    // задержкой (или не возвращает вовсе) — тогда человек видит спиннер и
+    // не знает, что можно просто вернуться на сайт самому. Показываем эту
+    // подсказку рано (через ~15с), не дожидаясь полного 10-минутного
+    // тайм-аута, и не трогая сам спиннер/опрос.
+    const EARLY_HINT_ATTEMPT = 6;
 
     const PENDING_ORDER_STORAGE_KEY = "kodPendingOrder";
     if (order) {
@@ -58,6 +69,7 @@
 
     async function poll(attempt) {
       if (!order || attempt >= MAX_ATTEMPTS) return showTimeout();
+      if (attempt === EARLY_HINT_ATTEMPT) earlyHint.hidden = false;
 
       try {
         const res = await fetch("/api/check-payment?order=" + encodeURIComponent(order));
