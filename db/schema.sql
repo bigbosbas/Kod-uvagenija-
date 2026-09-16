@@ -81,3 +81,11 @@ create table if not exists visits (
 
 create index if not exists visits_created_at_idx on visits (created_at desc);
 create index if not exists visits_utm_source_idx on visits (utm_source);
+
+-- Тот же общий сервер обслуживает оба лендинга (см. payments.product выше) —
+-- без этой колонки визиты с двух разных доменов/UTM-кампаний смешивались бы
+-- в статистике без возможности разделить источники по продукту.
+alter table visits add column if not exists product text not null default 'kod';
+alter table visits drop constraint if exists visits_product_check;
+alter table visits add constraint visits_product_check check (product in ('kod', 'peresborka'));
+create index if not exists visits_product_idx on visits (product);

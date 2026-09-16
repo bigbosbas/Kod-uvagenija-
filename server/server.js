@@ -8,6 +8,7 @@ const cookieParser = require("cookie-parser");
 const paymentsRouter = require("./routes/payments");
 const adminRouter = require("./routes/admin");
 const visitsRouter = require("./routes/visits");
+const { getSiteProduct } = require("./lib/site");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -29,11 +30,9 @@ app.use("/api/admin", adminRouter);
 // Один процесс/деплой обслуживает оба лендинга клиента («Код уважения» и
 // «Пересборка») — они делят один магазин Robokassa и одну базу (см. ТЗ
 // «Пересборки», раздел 2). Какой статический сайт отдавать, решаем по
-// заголовку Host. PERESBORKA_HOST — плейсхолдер до подтверждения домена
-// клиентом (ТЗ, раздел 4); переопределяется переменной окружения.
+// заголовку Host — логика в lib/site.js, общая с routes/visits.js.
 const PUBLIC_DIR = path.join(__dirname, "..", "public");
 const PERESBORKA_DIR = path.join(__dirname, "..", "public-peresborka");
-const PERESBORKA_HOST = process.env.PERESBORKA_HOST || "peresborka.privatebotrus.ru";
 
 // maxAge — только для повторных визитов; index.html через no-cache, чтобы
 // правки разметки/скриптов не залипали в браузере после деплоя.
@@ -57,7 +56,7 @@ app.get("/admin", (req, res) => {
 });
 
 app.use((req, res, next) => {
-  if (req.hostname === PERESBORKA_HOST) return servePeresborka(req, res, next);
+  if (getSiteProduct(req) === "peresborka") return servePeresborka(req, res, next);
   return serveKod(req, res, next);
 });
 

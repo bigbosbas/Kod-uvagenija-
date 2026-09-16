@@ -79,7 +79,7 @@ router.get("/stats", requireAdmin, async (req, res) => {
 
     const [paymentsResult, visitsResult] = await Promise.all([
       pool.query("select status, amount, access_source, product, created_at from payments"),
-      pool.query("select utm_source, created_at from visits"),
+      pool.query("select utm_source, product, created_at from visits"),
     ]);
 
     const payments = paymentsResult.rows;
@@ -101,15 +101,30 @@ router.get("/stats", requireAdmin, async (req, res) => {
       byProduct[key].revenue += Number(p.amount || 0);
     }
 
-    const sourceCounts = {};
-    for (const v of visitsLast30) {
-      const key = v.utm_source && v.utm_source.trim() ? v.utm_source.trim() : "(без метки)";
-      sourceCounts[key] = (sourceCounts[key] || 0) + 1;
+    // Источники считаем и вместе, и с разбивкой по продукту — с общим
+    // сервером на два лендинга UTM-метки одного продукта не должны
+    // теряться в статистике другого.
+    function topSourcesFor(list) {
+      const counts = {};
+      for (const v of list) {
+        const key = v.utm_source && v.utm_source.trim() ? v.utm_source.trim() : "(без метки)";
+        counts[key] = (counts[key] || 0) + 1;
+      }
+      return Object.entries(counts)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 8)
+        .map(([source, count]) => ({ source, count }));
     }
-    const topSources = Object.entries(sourceCounts)
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 8)
-      .map(([source, count]) => ({ source, count }));
+    const topSources = topSourcesFor(visitsLast30);
+    const topSourcesByProduct = {
+      kod: topSourcesFor(visitsLast30.filter((v) => (v.product || "kod") === "kod")),
+      peresborka: topSourcesFor(visitsLast30.filter((v) => v.product === "peresborka")),
+    };
+    const visitsByProduct = {};
+    for (const v of visitsLast30) {
+      const key = v.product || "kod";
+      visitsByProduct[key] = (visitsByProduct[key] || 0) + 1;
+    }
 
     const conversionRate =
       visitsLast30.length > 0 ? (paidLast30.length / visitsLast30.length) * 100 : 0;
@@ -123,6 +138,8 @@ router.get("/stats", requireAdmin, async (req, res) => {
       paidLast30Count: paidLast30.length,
       conversionRate: Math.round(conversionRate * 10) / 10,
       topSources,
+      topSourcesByProduct,
+      visitsByProduct,
       byProduct,
     });
   } catch (err) {

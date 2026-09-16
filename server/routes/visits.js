@@ -1,6 +1,7 @@
 const express = require("express");
 const crypto = require("crypto");
 const { getPool } = require("../lib/db");
+const { getSiteProduct } = require("../lib/site");
 
 const router = express.Router();
 const MAX_LEN = 300;
@@ -25,9 +26,11 @@ router.post("/log-visit", async (req, res) => {
   const body = req.body || {};
   try {
     const pool = getPool();
+    // product определяется по домену запроса на сервере, а не по тому, что
+    // прислал клиент — иначе можно было бы подделать статистику чужого сайта.
     await pool.query(
-      `insert into visits (utm_source, utm_medium, utm_campaign, utm_content, utm_term, referrer, landing_path, user_agent, ip_hash)
-       values ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+      `insert into visits (utm_source, utm_medium, utm_campaign, utm_content, utm_term, referrer, landing_path, user_agent, ip_hash, product)
+       values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
       [
         clean(body.utmSource),
         clean(body.utmMedium),
@@ -38,6 +41,7 @@ router.post("/log-visit", async (req, res) => {
         clean(body.landingPath),
         clean(body.userAgent),
         hashIp(req),
+        getSiteProduct(req),
       ]
     );
   } catch (err) {

@@ -75,14 +75,23 @@ async function loadStats() {
   document.getElementById("statVisits").textContent = stats.visitsLast30Count;
   document.getElementById("statConversion").textContent = `${stats.conversionRate}%`;
 
-  const sourcesBody = document.getElementById("sourcesBody");
-  if (!stats.topSources.length) {
-    sourcesBody.innerHTML = `<tr><td colspan="2" class="hint">Пока нет данных</td></tr>`;
-  } else {
-    sourcesBody.innerHTML = stats.topSources
-      .map((s) => `<tr><td>${escapeHtml(s.source)}</td><td>${Number(s.count)}</td></tr>`)
-      .join("");
+  const visitsByProduct = stats.visitsByProduct || {};
+  document.getElementById("visitsKod").textContent = visitsByProduct.kod || 0;
+  document.getElementById("visitsPeresborka").textContent = visitsByProduct.peresborka || 0;
+
+  function renderSources(elId, sources) {
+    const el = document.getElementById(elId);
+    if (!sources || !sources.length) {
+      el.innerHTML = `<tr><td colspan="2" class="hint">Пока нет данных</td></tr>`;
+    } else {
+      el.innerHTML = sources
+        .map((s) => `<tr><td>${escapeHtml(s.source)}</td><td>${Number(s.count)}</td></tr>`)
+        .join("");
+    }
   }
+  const byProductSources = stats.topSourcesByProduct || {};
+  renderSources("sourcesBodyKod", byProductSources.kod);
+  renderSources("sourcesBodyPeresborka", byProductSources.peresborka);
 }
 
 function showLogin() {
