@@ -26,15 +26,26 @@ function statusBadge(status) {
   return `<span class="badge ${cls}">${label}</span>`;
 }
 
+function productLabel(product) {
+  return product === "peresborka" ? "Пересборка" : "Код уважения";
+}
+
+// TODO: заполнить, когда определится домен «Пересборки» (см. ТЗ, раздел 4) —
+// ссылка на этот домен нужна, т.к. админка живёт на домене «Кода уважения»,
+// а /?access=token должен открываться на сайте того продукта, для которого выдан.
+const PERESBORKA_ORIGIN = "";
+
 async function loadOrders() {
   const res = await fetch("/api/admin/orders");
   if (res.status === 401) return showLogin();
   const { orders } = await res.json();
   ordersBody.innerHTML = orders
     .map((o) => {
-      const link = o.access_token ? `${window.location.origin}/?access=${o.access_token}` : null;
+      const origin = o.product === "peresborka" && PERESBORKA_ORIGIN ? PERESBORKA_ORIGIN : window.location.origin;
+      const link = o.access_token ? `${origin}/?access=${o.access_token}` : null;
       return `<tr>
         <td>${fmtDate(o.created_at)}</td>
+        <td>${productLabel(o.product)}</td>
         <td>${o.email ? escapeHtml(o.email) : "—"}</td>
         <td>${Number(o.amount).toFixed(0)} ₽</td>
         <td>${statusBadge(o.status)}</td>
@@ -138,6 +149,7 @@ document.getElementById("submitChangePassword").addEventListener("click", async 
 });
 
 document.getElementById("grantBtn").addEventListener("click", async () => {
+  const product = document.getElementById("grantProduct").value;
   const email = document.getElementById("grantEmail").value.trim();
   const notes = document.getElementById("grantNotes").value.trim();
   const errorEl = document.getElementById("grantError");
@@ -146,7 +158,7 @@ document.getElementById("grantBtn").addEventListener("click", async () => {
   const res = await fetch("/api/admin/grant-access", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email, notes }),
+    body: JSON.stringify({ product, email, notes }),
   });
   if (res.ok) {
     document.getElementById("grantEmail").value = "";

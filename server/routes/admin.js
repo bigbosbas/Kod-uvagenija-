@@ -1,7 +1,8 @@
 const express = require("express");
 const { getPool } = require("../lib/db");
 const { generateAccessToken } = require("../lib/accessToken");
-const { PRICE_RUB } = require("../lib/robokassa");
+const { PRODUCTS, getProductConfig } = require("../lib/robokassa");
+const { createOneTimeInviteLink } = require("../lib/telegram");
 const {
   SESSION_COOKIE,
   SESSION_TTL_SECONDS,
@@ -77,7 +78,7 @@ router.get("/stats", requireAdmin, async (req, res) => {
     const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
 
     const [paymentsResult, visitsResult] = await Promise.all([
-      pool.query("select status, amount, access_source, created_at from payments"),
+      pool.query("select status, amount, access_source, product, created_at from payments"),
       pool.query("select utm_source, created_at from visits"),
     ]);
 
@@ -90,6 +91,15 @@ router.get("/stats", requireAdmin, async (req, res) => {
 
     const totalRevenue = paid.reduce((sum, p) => sum + Number(p.amount || 0), 0);
     const manualCount = paid.filter((p) => p.access_source === "manual").length;
+
+    // Разбивка по продукту — оба лендинга делят одну таблицу payments.
+    const byProduct = {};
+    for (const p of paid) {
+      const key = p.product || "kod";
+      if (!byProduct[key]) byProduct[key] = { count: 0, revenue: 0 };
+      byProduct[key].count += 1;
+      byProduct[key].revenue += Number(p.amount || 0);
+    }
 
     const sourceCounts = {};
     for (const v of visitsLast30) {
@@ -113,6 +123,7 @@ router.get("/stats", requireAdmin, async (req, res) => {
       paidLast30Count: paidLast30.length,
       conversionRate: Math.round(conversionRate * 10) / 10,
       topSources,
+      byProduct,
     });
   } catch (err) {
     console.error("admin/stats error:", err);
@@ -126,7 +137,7 @@ router.get("/orders", requireAdmin, async (req, res) => {
     const pool = getPool();
     const { rows } = await pool.query(
       `select id, order_id, email, amount, status, access_source, access_token,
-              created_at, paid_at, notes
+              product, created_at, paid_at, notes
        from payments
        order by created_at desc
        limit 200`
@@ -143,16 +154,22 @@ router.get("/orders", requireAdmin, async (req, res) => {
 // (см. ТЗ, раздел 5: сама запись в базе доступ не открывает, пока ссылку не передали).
 router.post("/grant-access", requireAdmin, async (req, res) => {
   const { email, notes } = req.body || {};
+  const product = PRODUCTS[req.body && req.body.product] ? req.body.product : "kod";
   const orderId = `manual-${Date.now()}-${Math.random().toString(16).slice(2, 10)}`;
   const token = generateAccessToken();
 
   try {
+    const { priceRub } = getProductConfig(product);
+    // Для «Пересборки» ручная выдача тоже должна открыть реальный доступ —
+    // генерируем инвайт-ссылку в канал так же, как это делает вебхук.
+    const inviteLink = product === "peresborka" ? await createOneTimeInviteLink() : null;
+
     const pool = getPool();
     const { rows } = await pool.query(
-      `insert into payments (order_id, email, amount, status, paid_at, access_token, access_source, granted_by, notes)
-       values ($1, $2, $3, 'paid', now(), $4, 'manual', 'admin', $5)
-       returning id, order_id, access_token`,
-      [orderId, email || null, PRICE_RUB, token, notes || null]
+      `insert into payments (order_id, email, amount, status, paid_at, access_token, access_source, granted_by, notes, product, telegram_invite_link)
+       values ($1, $2, $3, 'paid', now(), $4, 'manual', 'admin', $5, $6, $7)
+       returning id, order_id, access_token, telegram_invite_link`,
+      [orderId, email || null, priceRub, token, notes || null, product, inviteLink]
     );
     res.json({ ok: true, order: rows[0] });
   } catch (err) {

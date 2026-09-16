@@ -22,6 +22,21 @@ create table if not exists payments (
   notes text
 );
 
+-- CREATE TABLE IF NOT EXISTS не добавляет колонки в уже существующую таблицу —
+-- это уже был кейс на живой базе «Кода уважения», добавляем явно и идемпотентно.
+-- Оба лендинга («Код уважения» и «Пересборка») делят один магазин Robokassa
+-- и один вебхук — платежи различаются пользовательским параметром Shp_product.
+-- 'kod' — значение по умолчанию для уже существующих записей.
+alter table payments add column if not exists product text not null default 'kod';
+alter table payments drop constraint if exists payments_product_check;
+alter table payments add constraint payments_product_check check (product in ('kod', 'peresborka'));
+
+-- Для 'peresborka' сюда пишется одноразовая Telegram-инвайт-ссылка вместо
+-- presigned S3-URL — доступ к материалам через приватный канал, не файл.
+alter table payments add column if not exists telegram_invite_link text;
+
+create index if not exists payments_product_idx on payments (product);
+
 create index if not exists payments_status_idx on payments (status);
 create index if not exists payments_created_at_idx on payments (created_at desc);
 

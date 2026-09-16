@@ -1,8 +1,9 @@
 const express = require("express");
 const { getPool } = require("../lib/db");
-const { PRICE_RUB, buildPaymentUrl, buildResultSignature, getPassword2 } = require("../lib/robokassa");
+const { PRODUCTS, getProductConfig, buildPaymentUrl, buildResultSignature, getPassword2 } = require("../lib/robokassa");
 const { generateAccessToken } = require("../lib/accessToken");
 const { getPdfDownloadUrl } = require("../lib/s3");
+const { createOneTimeInviteLink } = require("../lib/telegram");
 
 const router = express.Router();
 
@@ -25,21 +26,25 @@ function rateLimit({ windowMs, max }) {
 }
 
 // POST /api/create-payment — создаёт заказ и возвращает ссылку на оплату.
-// Доступ к файлу выдаётся НЕ здесь — только по серверному Result URL.
+// Доступ к материалам выдаётся НЕ здесь — только по серверному Result URL.
+// { product } в теле запроса — 'kod' (по умолчанию) или 'peresborka'; оба
+// лендинга делят один и тот же магазин Robokassa (см. ТЗ «Пересборки», раздел 5).
 router.post("/create-payment", rateLimit({ windowMs: 60_000, max: 10 }), async (req, res) => {
   const invId = Date.now();
+  const product = req.body && PRODUCTS[req.body.product] ? req.body.product : "kod";
 
   try {
+    const { priceRub } = getProductConfig(product);
     const pool = getPool();
     await pool.query(
-      "insert into payments (order_id, amount, status, access_source) values ($1, $2, 'pending', 'auto')",
-      [String(invId), PRICE_RUB]
+      "insert into payments (order_id, amount, status, access_source, product) values ($1, $2, 'pending', 'auto', $3)",
+      [String(invId), priceRub, product]
     );
 
     const protocol = req.get("x-forwarded-proto") || req.protocol;
     const host = req.get("host");
     const siteOrigin = `${protocol}://${host}`;
-    const paymentUrl = buildPaymentUrl(invId, siteOrigin);
+    const paymentUrl = buildPaymentUrl(invId, siteOrigin, product);
 
     res.json({ paymentUrl, invId: String(invId) });
   } catch (err) {
@@ -70,9 +75,11 @@ router.get("/check-payment", async (req, res) => {
 
 // POST /api/robokassa-webhook — Result URL. Единственное место, откуда
 // реально выдаётся доступ. Робокасса стучится сюда сервер-сервер,
-// подделать это из браузера нельзя.
+// подделать это из браузера нельзя. Один Result URL на оба продукта —
+// Shp_product (если передан при создании платежа) приходит обратно без
+// изменений и участвует в подписи (см. lib/robokassa.js buildResultSignature).
 router.post("/robokassa-webhook", express.urlencoded({ extended: false }), async (req, res) => {
-  const { OutSum: outSum, InvId: invId, SignatureValue: signature } = req.body;
+  const { OutSum: outSum, InvId: invId, SignatureValue: signature, Shp_product: shpProduct } = req.body;
 
   if (!outSum || !invId || !signature) {
     return res.status(400).send("Bad Request");
@@ -84,16 +91,18 @@ router.post("/robokassa-webhook", express.urlencoded({ extended: false }), async
     return res.status(500).send("Server misconfigured");
   }
 
-  const expected = buildResultSignature({ outSum, invId, password2 });
+  const expected = buildResultSignature({ outSum, invId, password2, shpProduct });
   if (expected.toLowerCase() !== String(signature).toLowerCase()) {
     console.error("robokassa-webhook: подпись не совпадает для InvId", invId);
     return res.status(403).send("Forbidden");
   }
 
+  const product = shpProduct === "peresborka" ? "peresborka" : "kod";
+
   try {
     const pool = getPool();
     const { rows } = await pool.query(
-      "select id, status, access_token from payments where order_id = $1",
+      "select id, status, access_token, telegram_invite_link from payments where order_id = $1",
       [String(invId)]
     );
     const existing = rows[0];
@@ -105,11 +114,20 @@ router.post("/robokassa-webhook", express.urlencoded({ extended: false }), async
     // Идемпотентность: Робокасса может продублировать уведомление.
     if (existing.status !== "paid") {
       const token = existing.access_token || generateAccessToken();
+      let inviteLink = existing.telegram_invite_link || null;
+
+      if (product === "peresborka" && !inviteLink) {
+        // Одноразовая ссылка создаётся один раз здесь, не при каждом
+        // опросе /api/verify-access — member_limit:1 должен тратиться
+        // ровно на выдачу этому конкретному покупателю.
+        inviteLink = await createOneTimeInviteLink();
+      }
+
       await pool.query(
         `update payments
-         set status = 'paid', paid_at = now(), access_token = $1, robokassa_payload = $2
-         where id = $3`,
-        [token, JSON.stringify(req.body), existing.id]
+         set status = 'paid', paid_at = now(), access_token = $1, robokassa_payload = $2, telegram_invite_link = $3
+         where id = $4`,
+        [token, JSON.stringify(req.body), inviteLink, existing.id]
       );
     }
 
@@ -121,7 +139,8 @@ router.post("/robokassa-webhook", express.urlencoded({ extended: false }), async
 });
 
 // GET /api/verify-access?token=<token> — проверяет токен и, если оплата
-// подтверждена, выдаёт временную подписанную ссылку на скачивание PDF.
+// подтверждена, выдаёт ссылку на материалы: presigned S3-URL для PDF
+// («Код уважения») или одноразовую Telegram-инвайт-ссылку («Пересборка»).
 router.get("/verify-access", rateLimit({ windowMs: 60_000, max: 30 }), async (req, res) => {
   const token = req.query.token;
   if (!token || typeof token !== "string" || token.length < 10) {
@@ -131,13 +150,25 @@ router.get("/verify-access", rateLimit({ windowMs: 60_000, max: 30 }), async (re
   try {
     const pool = getPool();
     const { rows } = await pool.query(
-      "select id from payments where access_token = $1 and status = 'paid'",
+      "select id, product, telegram_invite_link from payments where access_token = $1 and status = 'paid'",
       [token]
     );
-    if (!rows.length) return res.json({ valid: false });
+    const row = rows[0];
+    if (!row) return res.json({ valid: false });
+
+    if (row.product === "peresborka") {
+      if (!row.telegram_invite_link) {
+        // Не должно происходить (ссылка создаётся в вебхуке), но на случай
+        // сбоя Telegram API в момент оплаты — не оставляем покупателя
+        // без доступа молча.
+        console.error("verify-access: нет telegram_invite_link для оплаченного заказа", row.id);
+        return res.json({ valid: false });
+      }
+      return res.json({ valid: true, product: "peresborka", downloadUrl: row.telegram_invite_link });
+    }
 
     const downloadUrl = await getPdfDownloadUrl();
-    res.json({ valid: true, downloadUrl });
+    res.json({ valid: true, product: "kod", downloadUrl });
   } catch (err) {
     console.error("verify-access error:", err);
     res.json({ valid: false });
