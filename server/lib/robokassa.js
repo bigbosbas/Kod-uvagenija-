@@ -57,14 +57,22 @@ function buildReceipt(outSum, productName) {
   });
 }
 
-// Подпись для создания платежа: MerchantLogin:OutSum:InvId:Receipt:Пароль#1[:Shp_product=...]
+// Подпись для создания платежа:
+// MerchantLogin:OutSum:InvId:Receipt:SuccessUrl2:SuccessUrl2Method:FailUrl2:FailUrl2Method:Пароль#1[:Shp_product=...]
 // ВАЖНО (проверено на живом эндпоинте, не по документации Робокассы):
 // Receipt участвует в подписи как СЫРАЯ JSON-строка, БЕЗ url-кодирования —
 // encodeURIComponent()/urlencode()-стиль ломает подпись (ошибка 29).
+// SuccessUrl2/FailUrl2 тоже участвуют СЫРЫМИ (не url-encoded) — см. пример
+// строки подписи в docs.robokassa.ru/ru/notifications-and-redirects,
+// раздел "Дополнительная переадресация (ReturnURL: SuccessUrl2 / FailUrl2)".
+// Обычный SuccessURL/FailURL (без "2") НЕ переопределяет статические
+// Success/Fail URL из настроек магазина — это отдельный, другой параметр
+// (используется только для показа "итоговой страницы"); реальный
+// per-запросный редирект даёт только SuccessUrl2/FailUrl2.
 // Shp_* добавляются В КОНЕЦ строки, после пароля — таков порядок по докам
 // Robokassa (раздел "Сборка подписи"), и только когда параметр реально передан.
-function buildPaymentSignature({ merchantLogin, outSum, invId, receiptJson, password1, shpProduct }) {
-  let base = `${merchantLogin}:${outSum}:${invId}:${receiptJson}:${password1}`;
+function buildPaymentSignature({ merchantLogin, outSum, invId, receiptJson, successUrl2, failUrl2, password1, shpProduct }) {
+  let base = `${merchantLogin}:${outSum}:${invId}:${receiptJson}:${successUrl2}:GET:${failUrl2}:GET:${password1}`;
   if (shpProduct) base += `:Shp_product=${shpProduct}`;
   return md5(base);
 }
@@ -103,7 +111,9 @@ function buildPaymentUrl(invId, siteOrigin, product = "kod") {
 
   const outSum = formatSum(priceRub);
   const receiptJson = buildReceipt(outSum, name);
-  const signature = buildPaymentSignature({ merchantLogin, outSum, invId, receiptJson, password1, shpProduct });
+  const successUrl2 = `${siteOrigin}/payment-success.html`;
+  const failUrl2 = `${siteOrigin}/payment-fail.html`;
+  const signature = buildPaymentSignature({ merchantLogin, outSum, invId, receiptJson, successUrl2, failUrl2, password1, shpProduct });
 
   const params = new URLSearchParams({
     MerchantLogin: merchantLogin,
@@ -113,8 +123,10 @@ function buildPaymentUrl(invId, siteOrigin, product = "kod") {
     Receipt: receiptJson,
     SignatureValue: signature,
     Culture: "ru",
-    SuccessURL: `${siteOrigin}/payment-success.html`,
-    FailURL: `${siteOrigin}/payment-fail.html`,
+    SuccessUrl2: successUrl2,
+    SuccessUrl2Method: "GET",
+    FailUrl2: failUrl2,
+    FailUrl2Method: "GET",
   });
   if (shpProduct) params.set("Shp_product", shpProduct);
   if (isTestMode()) params.set("IsTest", "1");
