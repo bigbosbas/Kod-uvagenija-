@@ -4,6 +4,9 @@
   "version": "1.0.0",
   "description": "Лендинг курса «Код уважения» — Express-бэкенд на Timeweb Cloud (Robokassa, Postgres, S3)",
   "main": "server/server.js",
+  "engines": {
+    "node": ">=20.0.0"
+  },
   "scripts": {
     "start": "node server/server.js",
     "seed-admin": "node scripts/seed-admin-password.js",

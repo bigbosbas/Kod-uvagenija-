@@ -117,10 +117,14 @@ router.post("/robokassa-webhook", express.urlencoded({ extended: false }), async
       let inviteLink = existing.telegram_invite_link || null;
 
       if (product === "peresborka" && !inviteLink) {
-        // Одноразовая ссылка создаётся один раз здесь, не при каждом
-        // опросе /api/verify-access — member_limit:1 должен тратиться
-        // ровно на выдачу этому конкретному покупателю.
-        inviteLink = await createOneTimeInviteLink();
+        // Сбой Telegram (сеть/API) не должен блокировать фиксацию оплаты —
+        // иначе Robokassa получает 500 и клиент остаётся без статуса 'paid'
+        // вообще. Ссылку в этом случае лениво досоздаст /api/verify-access.
+        try {
+          inviteLink = await createOneTimeInviteLink();
+        } catch (telegramErr) {
+          console.error("robokassa-webhook: не удалось создать telegram-инвайт, платёж всё равно фиксируем", telegramErr);
+        }
       }
 
       await pool.query(
@@ -157,14 +161,20 @@ router.get("/verify-access", rateLimit({ windowMs: 60_000, max: 30 }), async (re
     if (!row) return res.json({ valid: false });
 
     if (row.product === "peresborka") {
-      if (!row.telegram_invite_link) {
-        // Не должно происходить (ссылка создаётся в вебхуке), но на случай
-        // сбоя Telegram API в момент оплаты — не оставляем покупателя
-        // без доступа молча.
-        console.error("verify-access: нет telegram_invite_link для оплаченного заказа", row.id);
-        return res.json({ valid: false });
+      let inviteLink = row.telegram_invite_link;
+      if (!inviteLink) {
+        // Вебхук мог не успеть создать ссылку (сбой Telegram API) — раз
+        // оплата уже подтверждена, досоздаём её здесь, чтобы покупатель не
+        // застревал без доступа до ручного вмешательства админа.
+        try {
+          inviteLink = await createOneTimeInviteLink();
+          await pool.query("update payments set telegram_invite_link = $1 where id = $2", [inviteLink, row.id]);
+        } catch (err) {
+          console.error("verify-access: не удалось создать telegram-инвайт", err);
+          return res.json({ valid: false });
+        }
       }
-      return res.json({ valid: true, product: "peresborka", downloadUrl: row.telegram_invite_link });
+      return res.json({ valid: true, product: "peresborka", downloadUrl: inviteLink });
     }
 
     const downloadUrl = await getPdfDownloadUrl();
