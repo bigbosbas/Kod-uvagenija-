@@ -116,6 +116,7 @@ router.post("/robokassa-webhook", express.urlencoded({ extended: false }), async
       const token = existing.access_token || generateAccessToken();
       let inviteLink = existing.telegram_invite_link || null;
 
+      let telegramDebugNote = null;
       if (product === "peresborka" && !inviteLink) {
         // Сбой Telegram (сеть/API) не должен блокировать фиксацию оплаты —
         // иначе Robokassa получает 500 и клиент остаётся без статуса 'paid'
@@ -124,14 +125,18 @@ router.post("/robokassa-webhook", express.urlencoded({ extended: false }), async
           inviteLink = await createOneTimeInviteLink();
         } catch (telegramErr) {
           console.error("robokassa-webhook: не удалось создать telegram-инвайт, платёж всё равно фиксируем", telegramErr);
+          // ВРЕМЕННО: текст ошибки в notes — на проде нет доступа к консоли.
+          // Убрать, как только причина сбоя Telegram будет найдена.
+          telegramDebugNote = `telegram error: ${String((telegramErr && telegramErr.stack) || telegramErr)}`.slice(0, 2000);
         }
       }
 
       await pool.query(
         `update payments
-         set status = 'paid', paid_at = now(), access_token = $1, robokassa_payload = $2, telegram_invite_link = $3
+         set status = 'paid', paid_at = now(), access_token = $1, robokassa_payload = $2, telegram_invite_link = $3,
+             notes = coalesce($5, notes)
          where id = $4`,
-        [token, JSON.stringify(req.body), inviteLink, existing.id]
+        [token, JSON.stringify(req.body), inviteLink, existing.id, telegramDebugNote]
       );
     }
 
@@ -171,6 +176,14 @@ router.get("/verify-access", rateLimit({ windowMs: 60_000, max: 30 }), async (re
           await pool.query("update payments set telegram_invite_link = $1 where id = $2", [inviteLink, row.id]);
         } catch (err) {
           console.error("verify-access: не удалось создать telegram-инвайт", err);
+          // ВРЕМЕННО: пишем текст реальной ошибки в notes — на проде нет
+          // прямого доступа к консольным логам, а без текста ошибки нельзя
+          // отличить "нет fetch в Node" от сетевой блокировки Telegram.
+          // Убрать эту строку, как только причина будет найдена.
+          await pool.query("update payments set notes = $1 where id = $2", [
+            `telegram error: ${String((err && err.stack) || err)}`.slice(0, 2000),
+            row.id,
+          ]).catch(() => {});
           return res.json({ valid: false });
         }
       }
