@@ -3,7 +3,19 @@
 // Бот должен быть администратором канала с правом «Приглашение
 // пользователей по ссылке». Токен и ID канала — только через .env,
 // никогда в коде/чате.
+const { fetch, Socks5ProxyAgent } = require("undici");
+
 const INVITE_TTL_SECONDS = 48 * 60 * 60; // 48 часов на переход по ссылке
+
+// api.telegram.org недоступен напрямую с серверов Timeweb (сетевая
+// блокировка Telegram в РФ, подтверждено логами: ConnectTimeoutError на
+// api.telegram.org:443, не проблема кода/Node — см. переписку 2026-09-17).
+// TELEGRAM_PROXY_URL — опциональный SOCKS5-прокси за пределами РФ
+// (socks5://user:pass@host:port). Без переменной запрос идёт напрямую.
+function getDispatcher() {
+  const proxyUrl = process.env.TELEGRAM_PROXY_URL;
+  return proxyUrl ? new Socks5ProxyAgent(proxyUrl) : undefined;
+}
 
 async function createOneTimeInviteLink() {
   const token = process.env.TELEGRAM_BOT_TOKEN_PERESBORKA;
@@ -22,6 +34,7 @@ async function createOneTimeInviteLink() {
       expire_date: expireDate,
       name: `peresborka-${Date.now()}`.slice(0, 32), // видно только админам канала
     }),
+    dispatcher: getDispatcher(),
   });
 
   const data = await res.json();
