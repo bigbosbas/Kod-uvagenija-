@@ -288,9 +288,10 @@ body.legal-modal-open { overflow: hidden; }
 /* ---------- Оверлей выдачи доступа ---------- */
 .download-overlay { position: fixed; inset: 0; background: rgba(11,24,33,0.72); display: flex; align-items: center; justify-content: center; z-index: 100; padding: 20px; }
 .download-overlay[hidden] { display: none; }
-.download-overlay__card { background: var(--white); border-radius: var(--radius-card); padding: 40px; max-width: 420px; width: 100%; text-align: center; box-shadow: 0 30px 60px -20px rgba(0,0,0,0.4); }
+.download-overlay__card { position: relative; background: var(--white); border-radius: var(--radius-card); padding: 40px; max-width: 420px; width: 100%; text-align: center; box-shadow: 0 30px 60px -20px rgba(0,0,0,0.4); }
 .download-overlay__card h3 { font-size: 1.4rem; margin-bottom: 12px; }
 .download-overlay__card p { color: var(--muted); font-family: var(--font-ui); font-size: 0.95rem; margin-bottom: 20px; }
+.download-overlay__close { position: absolute; top: 12px; right: 12px; }
 
 /* ---------- Адаптив ---------- */
 @media (max-width: 1099px) {

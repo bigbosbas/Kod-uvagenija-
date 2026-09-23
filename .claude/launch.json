@@ -6,6 +6,12 @@
       "runtimeExecutable": "npm",
       "runtimeArgs": ["start"],
       "port": 3000
+    },
+    {
+      "name": "peresborka-static-preview",
+      "runtimeExecutable": "python",
+      "runtimeArgs": ["-m", "http.server", "4500", "--directory", "public-peresborka"],
+      "port": 4500
     }
   ]
 }

@@ -36,6 +36,13 @@ function clearPendingOrder() {
 const overlay = document.getElementById("downloadOverlay");
 const overlayText = document.getElementById("downloadStatusText");
 const overlayLink = document.getElementById("downloadLink");
+const overlayClose = document.getElementById("downloadOverlayClose");
+
+if (overlayClose) {
+  overlayClose.addEventListener("click", () => {
+    overlay.hidden = true;
+  });
+}
 
 function showDownload(inviteUrl) {
   overlay.hidden = false;

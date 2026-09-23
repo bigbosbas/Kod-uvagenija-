@@ -19,7 +19,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,600;0,700;1,700&family=Lora:ital,wght@0,400;0,600;1,500&family=Manrope:wght@400;600;700&display=swap" rel="stylesheet" />
-<link rel="stylesheet" href="assets/css/style.css?v=4" />
+<link rel="stylesheet" href="assets/css/style.css?v=5" />
 </head>
 <body>
 
@@ -263,6 +263,9 @@
 
 <div class="download-overlay" id="downloadOverlay" hidden>
   <div class="download-overlay__card">
+    <button class="legal-modal__close download-overlay__close" type="button" id="downloadOverlayClose" aria-label="Закрыть">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18" /></svg>
+    </button>
     <h3>Оплата подтверждена</h3>
     <p id="downloadStatusText">Готовим ссылку на приватный канал…</p>
     <a class="btn btn--primary" id="downloadLink" href="#" target="_blank" rel="noopener" style="display:none;">Перейти в канал</a>
@@ -282,6 +285,6 @@
   </div>
 </div>
 
-<script src="assets/js/main.js?v=2"></script>
+<script src="assets/js/main.js?v=3"></script>
 </body>
 </html>
