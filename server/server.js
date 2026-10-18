@@ -9,6 +9,7 @@ const paymentsRouter = require("./routes/payments");
 const adminRouter = require("./routes/admin");
 const visitsRouter = require("./routes/visits");
 const { getSiteProduct } = require("./lib/site");
+const { oldSiteGone } = require("./lib/oldSite");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -20,6 +21,8 @@ app.disable("x-powered-by");
 // X-Content-Type-Options, Referrer-Policy и т.д.) применяются как обычно.
 app.use(helmet({ contentSecurityPolicy: false }));
 app.use(compression());
+// Старые домены клиента — до всего остального, см. lib/oldSite.js.
+app.use(oldSiteGone);
 app.use(express.json());
 app.use(cookieParser());
 

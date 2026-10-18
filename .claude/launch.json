@@ -12,6 +12,12 @@
       "runtimeExecutable": "python",
       "runtimeArgs": ["-m", "http.server", "4500", "--directory", "public-peresborka"],
       "port": 4500
+    },
+    {
+      "name": "old-site-stub-preview",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["scripts/preview-old-site.js"],
+      "port": 4510
     }
   ]
 }
