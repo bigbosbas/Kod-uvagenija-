@@ -36,8 +36,8 @@
 
   // Оферта / политика — во всплывающем окне поверх сайта, как на «Пересборке».
   const legalDocs = {
-    oferta: { src: "assets/legal/oferta.html?v=1", title: "Договор публичной оферты" },
-    privacy: { src: "assets/legal/privacy-policy.html?v=1", title: "Политика обработки персональных данных" },
+    oferta: { src: "assets/legal/oferta.html?v=2", title: "Договор публичной оферты" },
+    privacy: { src: "assets/legal/privacy-policy.html?v=3", title: "Политика обработки персональных данных" },
   };
   const legalModal = document.getElementById("legalModal");
   const legalFrame = document.getElementById("legalModalFrame");
