@@ -24,6 +24,12 @@
       "runtimeExecutable": "C:/Users/putin/AppData/Local/Python/pythoncore-3.14-64/python.exe",
       "runtimeArgs": ["-m", "http.server", "4520", "--directory", "public-knigi"],
       "port": 4520
+    },
+    {
+      "name": "kod-static-preview",
+      "runtimeExecutable": "C:/Users/putin/AppData/Local/Python/pythoncore-3.14-64/python.exe",
+      "runtimeArgs": ["-m", "http.server", "4530", "--directory", "public"],
+      "port": 4530
     }
   ]
 }
