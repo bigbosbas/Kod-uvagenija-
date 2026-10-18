@@ -24,8 +24,7 @@ const PRODUCTS = {
   // Лендинг книг (knigi.) — две книги, каждая отдельный продукт со своим
   // PDF в приватном S3 (ключи — в lib/s3.js BOOK_FILES).
   book_vliyanie: {
-    // ВРЕМЕННО 1 ₽ для проверочной покупки — вернуть 1250 сразу после теста.
-    priceRub: 1,
+    priceRub: 1250,
     name: "Книга «Невидимая энергия влияния» (PDF)",
     shpProduct: "book_vliyanie",
   },
