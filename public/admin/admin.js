@@ -195,3 +195,75 @@ document.getElementById("grantBtn").addEventListener("click", async () => {
 
 // Проверяем сессию сразу при загрузке.
 fetch("/api/admin/orders").then((res) => (res.status === 401 ? showLogin() : showMain()));
+
+// Выпадающее меню в стиле админки поверх обычного <select>: системный список
+// вариантов не стилизуется CSS. Настоящий select остаётся (скрыт) — значение
+// по-прежнему читается через .value, логика формы не меняется.
+function enhanceSelect(select) {
+  const wrap = document.createElement("div");
+  wrap.className = "dd";
+  select.parentNode.insertBefore(wrap, select);
+  wrap.append(select);
+  select.classList.add("dd__native");
+  select.tabIndex = -1;
+
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.className = "dd__btn";
+  btn.setAttribute("aria-haspopup", "listbox");
+  btn.setAttribute("aria-expanded", "false");
+  const label = document.createElement("span");
+  btn.append(label);
+  btn.insertAdjacentHTML("beforeend", '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>');
+  const labelEl = document.querySelector(`label[for="${select.id}"]`);
+  if (labelEl) { btn.id = select.id + "Btn"; labelEl.htmlFor = btn.id; }
+
+  const list = document.createElement("ul");
+  list.className = "dd__list";
+  list.setAttribute("role", "listbox");
+  list.hidden = true;
+  const opts = [...select.options].map((o, i) => {
+    const li = document.createElement("li");
+    li.className = "dd__opt";
+    li.setAttribute("role", "option");
+    li.textContent = o.textContent;
+    li.addEventListener("mousedown", (e) => e.preventDefault());
+    li.addEventListener("click", () => { choose(i); close(); btn.focus(); });
+    list.append(li);
+    return li;
+  });
+  wrap.append(btn, list);
+
+  let active = select.selectedIndex;
+  function render() {
+    label.textContent = select.options[select.selectedIndex].textContent;
+    opts.forEach((li, i) => {
+      li.setAttribute("aria-selected", String(i === select.selectedIndex));
+      li.classList.toggle("is-active", i === active);
+    });
+  }
+  function choose(i) {
+    select.selectedIndex = i;
+    select.dispatchEvent(new Event("change", { bubbles: true }));
+    render();
+  }
+  function open() { active = select.selectedIndex; list.hidden = false; wrap.classList.add("is-open"); btn.setAttribute("aria-expanded", "true"); render(); }
+  function close() { list.hidden = true; wrap.classList.remove("is-open"); btn.setAttribute("aria-expanded", "false"); }
+
+  btn.addEventListener("click", () => (list.hidden ? open() : close()));
+  btn.addEventListener("keydown", (e) => {
+    if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+      e.preventDefault();
+      if (list.hidden) return open();
+      active = (active + (e.key === "ArrowDown" ? 1 : -1) + opts.length) % opts.length;
+      render();
+    } else if ((e.key === "Enter" || e.key === " ") && !list.hidden) {
+      e.preventDefault(); choose(active); close();
+    } else if (e.key === "Escape") {
+      close();
+    }
+  });
+  btn.addEventListener("blur", close);
+  render();
+}
+document.querySelectorAll("select").forEach(enhanceSelect);
