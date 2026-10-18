@@ -12,10 +12,14 @@ const OLD_HOSTS = new Set(
     .filter(Boolean)
 );
 
+// Открытый канал клиента (ссылку дал сам клиент 18.10.2026). Переменная
+// окружения OLD_SITE_CHANNEL_URL при необходимости её переопределяет.
+const DEFAULT_CHANNEL_URL = "https://t.me/+010Tt_USoMc4ZTRi";
+
 // Ссылка на канал — только t.me, чтобы из переменной окружения в HTML не
 // попало что-то постороннее.
 function channelUrl() {
-  const raw = (process.env.OLD_SITE_CHANNEL_URL || "").trim();
+  const raw = (process.env.OLD_SITE_CHANNEL_URL || DEFAULT_CHANNEL_URL).trim();
   return /^https:\/\/t\.me\/[A-Za-z0-9_+\/-]+$/.test(raw) ? raw : "";
 }
 
@@ -26,7 +30,9 @@ function destinations() {
     { kind: "Курс", title: "Пересборка", href: "https://peresborka.privatebotrus.ru/", host: "peresborka.privatebotrus.ru" },
   ];
   const channel = channelUrl();
-  if (channel) list.unshift({ kind: "Telegram", title: "Канал Руслана", href: channel, host: channel.replace("https://", "") });
+  // У ссылки-приглашения (t.me/+…) хвост нечитаемый — показываем просто t.me.
+  const host = channel.includes("/+") ? "t.me" : channel.replace("https://", "");
+  if (channel) list.unshift({ kind: "Telegram", title: "Канал Руслана", href: channel, host });
   return list;
 }
 
