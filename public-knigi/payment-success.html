@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="robots" content="noindex, nofollow" />
+  <title>Оплата подтверждается — книги Руслана Нагайченко</title>
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml" />
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&family=Manrope:wght@400;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="assets/css/style.css?v=6" />
+  <style>
+    body { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px 16px; }
+    .status-card { max-width: 440px; width: 100%; background: var(--white); border: 1px solid var(--divider); border-radius: 20px; padding: 40px 32px; text-align: center; box-shadow: 0 30px 60px -30px rgba(11,24,33,0.35); }
+    .status-card__spinner { width: 40px; height: 40px; margin: 0 auto 22px; border-radius: 50%; border: 3px solid var(--divider); border-top-color: var(--gold); animation: spin 0.9s linear infinite; }
+    .status-card__title { font-family: var(--font-display); font-weight: 600; font-size: 1.9rem; line-height: 1.1; margin: 0 0 12px; }
+    .status-card__text { color: var(--muted); font-family: var(--font-ui); font-size: 0.92rem; line-height: 1.6; margin: 0; }
+    .status-card__hint { color: var(--muted); font-family: var(--font-ui); font-size: 0.84rem; line-height: 1.5; margin: 16px 0 0; }
+    .status-card__link { display: none; margin-top: 24px; }
+  </style>
+</head>
+<body>
+  <div class="status-card">
+    <div class="status-card__spinner" id="spinner"></div>
+    <h1 class="status-card__title" id="statusTitle">Проверяем оплату…</h1>
+    <p class="status-card__text" id="statusText">Обычно это занимает несколько секунд. Не закрывайте страницу.</p>
+    <p class="status-card__hint" id="earlyHint" hidden>Если оплата долго не подтверждается, эту страницу можно закрыть и открыть сайт заново в этом же браузере — книга откроется сама, повторно оплачивать не нужно.</p>
+    <a class="btn btn--primary status-card__link" id="homeLink" href="./">Вернуться на сайт</a>
+  </div>
+  <script>
+    // Та же логика, что на «Коде уважения»: Робокасса подтверждает оплату
+    // вебхуком не мгновенно, поэтому опрашиваем до 10 минут.
+    const params = new URLSearchParams(window.location.search);
+    const order = params.get("InvId") || params.get("order");
+    const spinner = document.getElementById("spinner");
+    const title = document.getElementById("statusTitle");
+    const text = document.getElementById("statusText");
+    const earlyHint = document.getElementById("earlyHint");
+    const homeLink = document.getElementById("homeLink");
+    const MAX_ATTEMPTS = 240;
+    const INTERVAL_MS = 2500;
+    const EARLY_HINT_ATTEMPT = 6;
+    const PENDING_KEY = "knigiPendingOrder";
+    if (order) {
+      try { localStorage.setItem(PENDING_KEY, JSON.stringify({ invId: order, ts: Date.now() })); } catch {}
+    }
+    function showTimeout() {
+      spinner.style.display = "none";
+      title.textContent = "Банк подтверждает платёж дольше обычного";
+      text.textContent = "Такое бывает при проверке карты — книга откроется сама, как только вы вернётесь на сайт в этом же браузере. Повторно оплачивать не нужно.";
+      homeLink.style.display = "inline-flex";
+    }
+    async function poll(attempt) {
+      if (!order || attempt >= MAX_ATTEMPTS) return showTimeout();
+      if (attempt === EARLY_HINT_ATTEMPT) earlyHint.hidden = false;
+      try {
+        const res = await fetch("/api/check-payment?order=" + encodeURIComponent(order));
+        const data = await res.json();
+        if (data.paid && data.accessToken) {
+          title.textContent = "Оплата подтверждена";
+          text.textContent = "Открываем ссылку на книгу…";
+          try { localStorage.removeItem(PENDING_KEY); } catch {}
+          window.location.href = "./?access=" + encodeURIComponent(data.accessToken);
+          return;
+        }
+      } catch {}
+      setTimeout(() => poll(attempt + 1), INTERVAL_MS);
+    }
+    poll(0);
+  </script>
+</body>
+</html>

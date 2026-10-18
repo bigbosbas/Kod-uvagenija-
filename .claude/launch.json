@@ -18,6 +18,12 @@
       "runtimeExecutable": "node",
       "runtimeArgs": ["scripts/preview-old-site.js"],
       "port": 4510
+    },
+    {
+      "name": "knigi-static-preview",
+      "runtimeExecutable": "C:/Users/putin/AppData/Local/Python/pythoncore-3.14-64/python.exe",
+      "runtimeArgs": ["-m", "http.server", "4520", "--directory", "public-knigi"],
+      "port": 4520
     }
   ]
 }

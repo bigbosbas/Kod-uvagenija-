@@ -119,6 +119,7 @@ router.get("/stats", requireAdmin, async (req, res) => {
     const topSourcesByProduct = {
       kod: topSourcesFor(visitsLast30.filter((v) => (v.product || "kod") === "kod")),
       peresborka: topSourcesFor(visitsLast30.filter((v) => v.product === "peresborka")),
+      knigi: topSourcesFor(visitsLast30.filter((v) => v.product === "knigi")),
     };
     const visitsByProduct = {};
     for (const v of visitsLast30) {

@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://knigi.privatebotrus.ru/sitemap.xml

@@ -1,8 +1,8 @@
 const express = require("express");
 const { getPool } = require("../lib/db");
-const { PRODUCTS, getProductConfig, buildPaymentUrl, buildResultSignature, getPassword2 } = require("../lib/robokassa");
+const { PRODUCTS, BOOK_PRODUCTS, getProductConfig, buildPaymentUrl, buildResultSignature, getPassword2 } = require("../lib/robokassa");
 const { generateAccessToken } = require("../lib/accessToken");
-const { getPdfDownloadUrl } = require("../lib/s3");
+const { getPdfDownloadUrl, getBookDownloadUrl } = require("../lib/s3");
 const { createOneTimeInviteLink } = require("../lib/telegram");
 
 const router = express.Router();
@@ -27,8 +27,8 @@ function rateLimit({ windowMs, max }) {
 
 // POST /api/create-payment — создаёт заказ и возвращает ссылку на оплату.
 // Доступ к материалам выдаётся НЕ здесь — только по серверному Result URL.
-// { product } в теле запроса — 'kod' (по умолчанию) или 'peresborka'; оба
-// лендинга делят один и тот же магазин Robokassa (см. ТЗ «Пересборки», раздел 5).
+// { product } в теле запроса — 'kod' (по умолчанию), 'peresborka' или одна из
+// книг (book_*); все лендинги делят один магазин Robokassa (см. ТЗ «Пересборки», раздел 5).
 router.post("/create-payment", rateLimit({ windowMs: 60_000, max: 10 }), async (req, res) => {
   const invId = Date.now();
   const product = req.body && PRODUCTS[req.body.product] ? req.body.product : "kod";
@@ -97,7 +97,9 @@ router.post("/robokassa-webhook", express.urlencoded({ extended: false }), async
     return res.status(403).send("Forbidden");
   }
 
-  const product = shpProduct === "peresborka" ? "peresborka" : "kod";
+  // Shp_product подписан Робокассой (участвует в подписи выше), поэтому ему
+  // можно доверять; неизвестное значение — исходный продукт 'kod'.
+  const product = shpProduct && PRODUCTS[shpProduct] ? shpProduct : "kod";
 
   try {
     const pool = getPool();
@@ -175,6 +177,11 @@ router.get("/verify-access", rateLimit({ windowMs: 60_000, max: 30 }), async (re
         }
       }
       return res.json({ valid: true, product: "peresborka", downloadUrl: inviteLink });
+    }
+
+    if (BOOK_PRODUCTS.includes(row.product)) {
+      const downloadUrl = await getBookDownloadUrl(row.product);
+      return res.json({ valid: true, product: row.product, downloadUrl });
     }
 
     const downloadUrl = await getPdfDownloadUrl();

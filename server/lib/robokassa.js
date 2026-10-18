@@ -21,7 +21,22 @@ const PRODUCTS = {
     name: "Курс «Пересборка»",
     shpProduct: "peresborka",
   },
+  // Лендинг книг (knigi.) — две книги, каждая отдельный продукт со своим
+  // PDF в приватном S3 (ключи — в lib/s3.js BOOK_FILES).
+  book_vliyanie: {
+    priceRub: 1250,
+    name: "Книга «Невидимая энергия влияния» (PDF)",
+    shpProduct: "book_vliyanie",
+  },
+  book_obshchenie: {
+    priceRub: 1250,
+    name: "Книга «Скрытая власть общения» (PDF)",
+    shpProduct: "book_obshchenie",
+  },
 };
+
+// Продукты, которые выдаются как PDF по presigned-ссылке (не Telegram).
+const BOOK_PRODUCTS = ["book_vliyanie", "book_obshchenie"];
 
 function getProductConfig(product) {
   const config = PRODUCTS[product];
@@ -134,6 +149,7 @@ function buildPaymentUrl(invId, siteOrigin, product = "kod") {
 
 module.exports = {
   PRODUCTS,
+  BOOK_PRODUCTS,
   getProductConfig,
   buildPaymentUrl,
   buildResultSignature,

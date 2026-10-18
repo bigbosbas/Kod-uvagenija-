@@ -9,3 +9,8 @@ node_modules/
 _extracted/
 *.zip
 Prototype design.png
+
+# Сборки для показа заказчику на Netlify — генерируются из public-knigi, не часть деплоя.
+_netlify/
+# PDF для загрузки в приватный S3 — платный контент, в git не кладём.
+_s3-upload/

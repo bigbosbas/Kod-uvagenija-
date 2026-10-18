@@ -26,14 +26,22 @@ function statusBadge(status) {
   return `<span class="badge ${cls}">${label}</span>`;
 }
 
+const PRODUCT_LABELS = {
+  kod: "Код уважения",
+  peresborka: "Пересборка",
+  book_vliyanie: "Книга «Невидимая энергия влияния»",
+  book_obshchenie: "Книга «Скрытая власть общения»",
+};
 function productLabel(product) {
-  return product === "peresborka" ? "Пересборка" : "Код уважения";
+  return PRODUCT_LABELS[product] || PRODUCT_LABELS.kod;
 }
 
 // TODO: заполнить, когда определится домен «Пересборки» (см. ТЗ, раздел 4) —
 // ссылка на этот домен нужна, т.к. админка живёт на домене «Кода уважения»,
 // а /?access=token должен открываться на сайте того продукта, для которого выдан.
 const PERESBORKA_ORIGIN = "";
+// Книги открываются только на своём домене — ссылка доступа ведёт туда.
+const KNIGI_ORIGIN = "https://knigi.privatebotrus.ru";
 
 async function loadOrders() {
   const res = await fetch("/api/admin/orders");
@@ -41,7 +49,9 @@ async function loadOrders() {
   const { orders } = await res.json();
   ordersBody.innerHTML = orders
     .map((o) => {
-      const origin = o.product === "peresborka" && PERESBORKA_ORIGIN ? PERESBORKA_ORIGIN : window.location.origin;
+      const origin = String(o.product).startsWith("book_")
+        ? KNIGI_ORIGIN
+        : o.product === "peresborka" && PERESBORKA_ORIGIN ? PERESBORKA_ORIGIN : window.location.origin;
       const link = o.access_token ? `${origin}/?access=${o.access_token}` : null;
       return `<tr>
         <td>${fmtDate(o.created_at)}</td>
@@ -78,6 +88,7 @@ async function loadStats() {
   const visitsByProduct = stats.visitsByProduct || {};
   document.getElementById("visitsKod").textContent = visitsByProduct.kod || 0;
   document.getElementById("visitsPeresborka").textContent = visitsByProduct.peresborka || 0;
+  document.getElementById("visitsKnigi").textContent = visitsByProduct.knigi || 0;
 
   function renderSources(elId, sources) {
     const el = document.getElementById(elId);
@@ -92,6 +103,7 @@ async function loadStats() {
   const byProductSources = stats.topSourcesByProduct || {};
   renderSources("sourcesBodyKod", byProductSources.kod);
   renderSources("sourcesBodyPeresborka", byProductSources.peresborka);
+  renderSources("sourcesBodyKnigi", byProductSources.knigi);
 }
 
 function showLogin() {

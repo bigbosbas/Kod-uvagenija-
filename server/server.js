@@ -36,6 +36,7 @@ app.use("/api/admin", adminRouter);
 // заголовку Host — логика в lib/site.js, общая с routes/visits.js.
 const PUBLIC_DIR = path.join(__dirname, "..", "public");
 const PERESBORKA_DIR = path.join(__dirname, "..", "public-peresborka");
+const KNIGI_DIR = path.join(__dirname, "..", "public-knigi");
 
 // maxAge — только для повторных визитов; index.html через no-cache, чтобы
 // правки разметки/скриптов не залипали в браузере после деплоя.
@@ -49,6 +50,7 @@ const staticOptions = {
 };
 const serveKod = express.static(PUBLIC_DIR, staticOptions);
 const servePeresborka = express.static(PERESBORKA_DIR, staticOptions);
+const serveKnigi = express.static(KNIGI_DIR, staticOptions);
 
 // Админка общая на оба продукта (различие — колонка/фильтр product в самих
 // данных) — маунтится ДО хост-диспетчера ниже, иначе с домена «Пересборки»
@@ -59,7 +61,9 @@ app.get("/admin", (req, res) => {
 });
 
 app.use((req, res, next) => {
-  if (getSiteProduct(req) === "peresborka") return servePeresborka(req, res, next);
+  const site = getSiteProduct(req);
+  if (site === "peresborka") return servePeresborka(req, res, next);
+  if (site === "knigi") return serveKnigi(req, res, next);
   return serveKod(req, res, next);
 });
 

@@ -104,12 +104,23 @@
   </div>
 
   <div class="panel">
+    <h3 style="margin-bottom: 6px;">Источники переходов за 30 дней — книги</h3>
+    <p class="hint" style="margin-bottom: 14px;">Метки UTM, с которыми люди приходят на страницу (визитов: <span id="visitsKnigi">—</span>)</p>
+    <table>
+      <thead><tr><th>Источник</th><th>Визитов</th></tr></thead>
+      <tbody id="sourcesBodyKnigi"><tr><td colspan="2" class="hint">Загрузка…</td></tr></tbody>
+    </table>
+  </div>
+
+  <div class="panel">
     <h3 style="margin-bottom: 14px;">Выдать доступ вручную</h3>
     <p class="hint" style="margin-bottom: 14px;">Создаёт оплаченную запись и токен доступа. Ссылку нужно скопировать и отправить клиенту отдельно — сама запись в базе доступ не открывает.</p>
     <div class="field"><label for="grantProduct">Продукт</label>
       <select id="grantProduct">
         <option value="kod">Код уважения</option>
         <option value="peresborka">Пересборка</option>
+        <option value="book_vliyanie">Книга «Невидимая энергия влияния»</option>
+        <option value="book_obshchenie">Книга «Скрытая власть общения»</option>
       </select>
     </div>
     <div class="field"><label for="grantEmail">Email клиента (необязательно)</label><input type="text" id="grantEmail" /></div>
@@ -136,6 +147,6 @@
   </div>
 </div>
 
-<script src="admin.js?v=2"></script>
+<script src="admin.js?v=3"></script>
 </body>
 </html>

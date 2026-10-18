@@ -29,7 +29,7 @@ create table if not exists payments (
 -- 'kod' — значение по умолчанию для уже существующих записей.
 alter table payments add column if not exists product text not null default 'kod';
 alter table payments drop constraint if exists payments_product_check;
-alter table payments add constraint payments_product_check check (product in ('kod', 'peresborka'));
+alter table payments add constraint payments_product_check check (product in ('kod', 'peresborka', 'book_vliyanie', 'book_obshchenie'));
 
 -- Для 'peresborka' сюда пишется одноразовая Telegram-инвайт-ссылка вместо
 -- presigned S3-URL — доступ к материалам через приватный канал, не файл.
@@ -87,5 +87,5 @@ create index if not exists visits_utm_source_idx on visits (utm_source);
 -- в статистике без возможности разделить источники по продукту.
 alter table visits add column if not exists product text not null default 'kod';
 alter table visits drop constraint if exists visits_product_check;
-alter table visits add constraint visits_product_check check (product in ('kod', 'peresborka'));
+alter table visits add constraint visits_product_check check (product in ('kod', 'peresborka', 'knigi'));
 create index if not exists visits_product_idx on visits (product);
