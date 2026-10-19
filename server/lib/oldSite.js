@@ -1,8 +1,9 @@
 // Старый сайт клиента (nagaichenkopsy.com и app.) выводим из поиска: его DNS
 // направлен на этот же сервер, и на любой адрес этих доменов отвечаем
 // 410 Gone + noindex. С 410 Яндекс и Google снимают страницы быстрее, чем с
-// редиректом. robots.txt специально НЕ закрывает сайт: иначе поисковик не
-// сможет зайти, не увидит 410/noindex и оставит страницы в выдаче.
+// редиректом. robots.txt закрывает сайт только для Яндекса: его «Удаление по
+// префиксу» в Вебмастере требует Disallow. Для остальных (Google) сайт открыт,
+// иначе робот не зайдёт, не увидит 410/noindex и оставит страницы в выдаче.
 // Маунтится до /api — иначе старые пути вроде app.…/api/order попали бы в
 // API лендингов.
 const OLD_HOSTS = new Set(
@@ -163,7 +164,7 @@ function oldSiteGone(req, res, next) {
   if (!OLD_HOSTS.has(String(req.hostname || "").toLowerCase())) return next();
 
   if (req.path === "/robots.txt") {
-    res.type("text/plain").set("Cache-Control", "no-cache").send("User-agent: *\nAllow: /\n");
+    res.type("text/plain").set("Cache-Control", "no-cache").send("User-agent: Yandex\nDisallow: /\n\nUser-agent: *\nAllow: /\n");
     return;
   }
   res
