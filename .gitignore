@@ -14,3 +14,13 @@ Prototype design.png
 _netlify/
 # PDF для загрузки в приватный S3 — платный контент, в git не кладём.
 _s3-upload/
+# Документы бота @ruspsy_bot (оферта/политика) — публичные, их отдаёт kod.
+!public/assets/legal/*.pdf
+
+# Боты: базы с подписчиками, логи и входящие файлы живут только на сервере.
+bots/**/*.db
+bots/**/*.sqlite3
+bots/**/*.log
+bots/**/inbox/
+bots/**/venv/
+__pycache__/
