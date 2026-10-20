@@ -73,6 +73,27 @@ router.get("/check-payment", async (req, res) => {
   }
 });
 
+const PRIVATE_BOT_RESULT_URL =
+  process.env.PRIVATE_BOT_RESULT_URL || "https://privatebotrus.ru/webhook/robokassa/result";
+
+async function forwardToPrivateBot(req, res, invId) {
+  try {
+    const upstream = await fetch(PRIVATE_BOT_RESULT_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams(req.body).toString(),
+      signal: AbortSignal.timeout(15_000),
+    });
+    const text = await upstream.text();
+    if (!upstream.ok) console.error("robokassa-webhook: бот ответил", upstream.status, "для InvId", invId);
+    // Ответ бота (OK<InvId> или ошибка) отдаём Робокассе: при ошибке она повторит уведомление.
+    res.status(upstream.status).type("text/plain").send(text.slice(0, 200));
+  } catch (err) {
+    console.error("robokassa-webhook: бот недоступен для InvId", invId, err.message);
+    res.status(502).send("Bot unavailable");
+  }
+}
+
 // POST /api/robokassa-webhook — Result URL. Единственное место, откуда
 // реально выдаётся доступ. Робокасса стучится сюда сервер-сервер,
 // подделать это из браузера нельзя. Один Result URL на оба продукта —
@@ -95,6 +116,14 @@ router.post("/robokassa-webhook", express.urlencoded({ extended: false }), async
   if (expected.toLowerCase() !== String(signature).toLowerCase()) {
     console.error("robokassa-webhook: подпись не совпадает для InvId", invId);
     return res.status(403).send("Forbidden");
+  }
+
+  // Магазин Робокассы общий с ботом подписки @rusprivatepsycho_bot, а Result URL
+  // у магазина один — сюда. Счета бота — маленькие номера из его базы (сотни),
+  // без Shp_product; наши — Date.now(). Такие уведомления (подпись уже
+  // проверена выше) пересылаем боту как есть, он проверяет её ещё раз сам.
+  if (!shpProduct && /^\d{1,6}$/.test(String(invId))) {
+    return forwardToPrivateBot(req, res, invId);
   }
 
   // Shp_product подписан Робокассой (участвует в подписи выше), поэтому ему
