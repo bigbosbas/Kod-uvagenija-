@@ -29,6 +29,7 @@ function destinations() {
   const list = [
     { kind: "Курс", title: "Код уважения", href: "https://kod.privatebotrus.ru/", host: "kod.privatebotrus.ru" },
     { kind: "Курс", title: "Пересборка", href: "https://peresborka.privatebotrus.ru/", host: "peresborka.privatebotrus.ru" },
+    { kind: "Вебинар", title: "Измена, обида и предательство", href: "https://webinar.nagaichenkopsy.com/", host: "webinar.nagaichenkopsy.com" },
   ];
   const channel = channelUrl();
   // У ссылки-приглашения (t.me/+…) хвост нечитаемый — показываем просто t.me.
