@@ -9,7 +9,7 @@ from aiogram import Bot, Dispatcher, F, Router
 from aiogram.client.default import DefaultBotProperties
 from aiogram.client.session.aiohttp import AiohttpSession
 from aiogram.enums import ParseMode
-from aiogram.exceptions import TelegramBadRequest, TelegramForbiddenError
+from aiogram.exceptions import TelegramBadRequest, TelegramForbiddenError, TelegramNetworkError
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
@@ -177,16 +177,50 @@ async def send_payment_link(callback: CallbackQuery, db: Database, settings: Set
     await callback.answer()
 
 
+# Telegram ходит через SOCKS5-прокси, и при его сбоях каждая итерация падала с
+# таймаутом — админам летела «Системная ошибка» раз в пару минут. Сетевые сбои
+# теперь только в журнал; админам — если сбой держится дольше NETWORK_ALERT_AFTER,
+# и не чаще раза в NETWORK_ALERT_EVERY.
+NETWORK_ALERT_AFTER = timedelta(minutes=30)
+NETWORK_ALERT_EVERY = timedelta(hours=3)
+
+
 async def background_jobs(bot: Bot, db: Database, settings: Settings) -> None:
+    failing_since = last_alert = None
     while True:
         try:
             db.cancel_stale_pending_payments()
             await process_expired_users(bot, db, settings)
             await process_notifications(bot, db, settings)
+            failing_since = None
+        except TelegramNetworkError as exc:
+            now = datetime.now(timezone.utc)
+            failing_since = failing_since or now
+            logging.warning("Telegram недоступен (прокси?): %s", exc)
+            if now - failing_since >= NETWORK_ALERT_AFTER and (
+                    last_alert is None or now - last_alert >= NETWORK_ALERT_EVERY):
+                last_alert = now
+                db.log_event("system_error", "Telegram API unreachable", error_text=str(exc))
+                with contextlib.suppress(Exception):
+                    await notify_admins(bot, settings,
+                                        "⚠️ Бот больше 30 минут плохо связывается с Telegram "
+                                        "(сбой прокси). Оплаты не теряются, но уведомления "
+                                        "могут задерживаться.")
         except Exception as exc:
             db.log_event("system_error", "Background job failed", error_text=str(exc))
             await notify_admins(bot, settings, f"Системная ошибка:\n{exc}")
         await asyncio.sleep(60)
+
+
+async def _send_once(bot: Bot, user_id: int, text: str, reply_markup) -> None:
+    # Напоминание отмечается отправленным, даже если ответ Telegram не дошёл по
+    # таймауту: сообщение могло уйти, и повтор через минуту дал бы дубли.
+    try:
+        await bot.send_message(user_id, text, reply_markup=reply_markup)
+    except TelegramForbiddenError:
+        pass
+    except TelegramNetworkError as exc:
+        logging.warning("Напоминание user_id=%s: сеть, повтор не делаем: %s", user_id, exc)
 
 
 async def process_expired_users(bot: Bot, db: Database, settings: Settings) -> None:
@@ -205,21 +239,17 @@ async def process_notifications(bot: Bot, db: Database, settings: Settings) -> N
     reminder_template = db.get_setting("tmpl_renewal_reminder") or ""
     for kind in ("3d", "1d", "day"):
         for row in db.get_users_for_notification(kind):
-            try:
-                text = render(
-                    reminder_template,
-                    plan_title=row["plan_title"] or "не выбран",
-                    expires_at=row["subscription_expires_at"] or "",
-                )
-                await bot.send_message(row["user_id"], text, reply_markup=plans_keyboard(db))
-            except TelegramForbiddenError:
-                pass
+            text = render(
+                reminder_template,
+                plan_title=row["plan_title"] or "не выбран",
+                expires_at=row["subscription_expires_at"] or "",
+            )
+            await _send_once(bot, row["user_id"], text, plans_keyboard(db))
             db.mark_notification_sent(row["user_id"], kind)
 
     expired_template = db.get_setting("tmpl_subscription_expired") or ""
     for row in db.get_users_for_notification("expired"):
-        with contextlib.suppress(TelegramForbiddenError):
-            await bot.send_message(row["user_id"], expired_template, reply_markup=plans_keyboard(db))
+        await _send_once(bot, row["user_id"], expired_template, plans_keyboard(db))
         db.mark_notification_sent(row["user_id"], "expired")
 
 
